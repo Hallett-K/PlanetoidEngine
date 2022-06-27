@@ -20,7 +20,7 @@ namespace PlanetoidEngine
     {
     }
 
-    bool GLDisplay::Init(unsigned int width, unsigned int height, const char* title)
+    bool GLDisplay::Init(unsigned int width, unsigned int height, const char* title, bool fullscreen)
     {
         if (glfwInit() == GLFW_FALSE)
         {
@@ -34,7 +34,10 @@ namespace PlanetoidEngine
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-        m_windowHandle = glfwCreateWindow(width, height, title, NULL, NULL);
+        // TODO: Monitor selection
+        GLFWmonitor* monitor = (fullscreen ? glfwGetPrimaryMonitor() : NULL);
+        m_windowHandle = glfwCreateWindow(width, height, title, monitor, NULL);
+
         if (m_windowHandle == NULL)
         {
             // TODO: Error handling
@@ -78,6 +81,11 @@ namespace PlanetoidEngine
             glfwDestroyWindow(m_windowHandle);
             m_windowHandle = NULL;
         }
+    }
+
+    bool GLDisplay::IsOpen() const
+    {
+        return !glfwWindowShouldClose(m_windowHandle);
     }
 
     void GLDisplay::framebuffer_resize(unsigned int width, unsigned int height)
