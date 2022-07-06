@@ -16,11 +16,21 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\AssetManager.cpp" />
     <ClCompile Include="src\GLDisplay.cpp" />
+    <ClCompile Include="src\Resources\Shader.cpp" />
+    <ClCompile Include="src\Resources\Texture.cpp" />
     <ClCompile Include="src\Source.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\AssetManager.h" />
     <ClInclude Include="src\GLDisplay.h" />
+    <ClInclude Include="src\Resources\Shader.h" />
+    <ClInclude Include="src\Resources\Texture.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="rsc\shaders\shader.frag" />
+    <None Include="rsc\shaders\shader.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
