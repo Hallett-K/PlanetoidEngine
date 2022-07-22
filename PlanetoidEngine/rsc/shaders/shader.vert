@@ -5,8 +5,10 @@ layout (location = 1) in vec2 vTex;
 
 out vec2 fTex;
 
+uniform mat4 u_mvp;
+
 void main()
 {
-    gl_Position = vec4(vPos, 0.0, 1.0);
+    gl_Position = u_mvp * vec4(vPos, 0.0, 1.0);
     fTex = vTex;
 }

@@ -7,6 +7,15 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+struct TransformComponent
+{
+    glm::vec2 position;
+    float rotation;
+    glm::vec2 size;
+};
 
 int main(int argc, char** argv)
 {
@@ -55,6 +64,11 @@ int main(int argc, char** argv)
 
     PlanetoidEngine::Texture* tex = assetManager.GetTexture("rsc/img/crate.png");
 
+    TransformComponent quadTransform{ {320.0f, 240.0f}, 0.0f, { 100.0f, 100.0f } };
+
+    glm::mat4 view = glm::mat4(1.0f);
+    glm::mat4 proj = glm::orthoLH(0.0f, 1280.0f, 720.0f, 0.0f, 0.0f, 1.0f);
+
     while (display.IsOpen())
     {
         display.Update();
@@ -67,6 +81,14 @@ int main(int argc, char** argv)
         shader->Use();
         tex->Bind(0);
         shader->SetUniformTex("uTex", 0);
+
+        // MVP matrix
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(quadTransform.position, 0.0f));
+        model = glm::rotate(model, quadTransform.rotation, glm::vec3(0, 0, 1));
+        model = glm::scale(model, glm::vec3(quadTransform.size, 1.0f));
+
+        glm::mat4 mvp = proj * view * model;
+        shader->SetUniformMat4("u_mvp", mvp);
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 

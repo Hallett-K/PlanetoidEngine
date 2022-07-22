@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace PlanetoidEngine
 {
@@ -97,6 +98,11 @@ namespace PlanetoidEngine
     void Shader::SetUniformTex(const char* uniformName, int textureSlot)
     {
         glUniform1i(glGetUniformLocation(m_programID, uniformName), textureSlot);
+    }
+
+    void Shader::SetUniformMat4(const char* uniformName, const glm::mat4& matrix)
+    {
+        glUniformMatrix4fv(glGetUniformLocation(m_programID, uniformName), 1, GL_FALSE, glm::value_ptr(matrix));
     }
 
 }
