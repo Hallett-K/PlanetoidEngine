@@ -1,3 +1,0 @@
-D:/Projects/PlanetoidEngine/PlanetoidPong/PlanetoidPong.ship
-D:/Projects/PlanetoidEngine/Test123/Test123.ship
-D:/Projects/PlanetoidEngine/Untitled/Untitled.ship

@@ -6,3 +6,5 @@ Sandbox/
 *.exe
 *.dll
 *.ini
+
+bin/recent_projects.txt
