@@ -33,7 +33,7 @@ namespace PlanetoidEngine
         virtual void Shutdown();
 
         inline bool IsRunning() const { return m_Running; }
-        void Exit();
+        virtual void Exit();
 
     protected:
         WindowProperties windowProperties;

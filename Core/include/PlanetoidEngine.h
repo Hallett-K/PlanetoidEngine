@@ -14,12 +14,21 @@
 
 namespace PlanetoidEngine
 {
-    const unsigned int majorVersion = 0;
-    const unsigned int minorVersion = 1;
-    const unsigned int patchVersion = 0;
+    const unsigned int majorVersion = 2025;
+    const unsigned int minorVersion = 6;
+    const unsigned int patchVersion = 22;
 
     std::string GetVersionString()
     {
-        return std::to_string(majorVersion) + "." + std::to_string(minorVersion) + "." + std::to_string(patchVersion);
+        // Format: YYYY-MM-DD
+        std::string minorVersionString = std::to_string(minorVersion);
+        if (minorVersion < 10)
+            minorVersionString = "0" + minorVersionString;
+        
+        std::string patchVersionString = std::to_string(patchVersion);
+        if (patchVersion < 10)
+            patchVersionString = "0" + patchVersionString;
+        
+        return std::to_string(majorVersion) + "-" + minorVersionString + "-" + patchVersionString;
     }
 }

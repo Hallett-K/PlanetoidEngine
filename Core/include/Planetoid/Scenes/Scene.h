@@ -50,6 +50,8 @@ namespace PlanetoidEngine
         std::unordered_map<UUID, Entity> m_uuidMap;
         std::unordered_map<UUID, b2Body*> m_physicsBodyMap;
 
+        std::vector<Entity> m_destroyList;
+
         b2World* m_physicsWorld = nullptr;
         float m_pixelsPerMeter = 100.0f;
         glm::vec2 m_gravity = glm::vec2(0.0f, -15.0f);

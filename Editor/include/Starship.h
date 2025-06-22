@@ -16,6 +16,7 @@
 #include <imgui_impl_opengl3.h>
 
 #include "EditorContext.h"
+#include "PerformanceMetrics.h"
 
 
 class Starship : public PlanetoidEngine::Application
@@ -25,6 +26,7 @@ public:
     virtual void Init() override;
     virtual void Update(float deltaTime) override;
     virtual void Shutdown() override;
+    virtual void Exit() override;
 
 protected:
     Starship(PlanetoidEngine::CommandLineArgs args)
@@ -64,6 +66,7 @@ private:
     friend PlanetoidEngine::Application* PlanetoidEngine::CreateApplication(CommandLineArgs commandLineArgs);
 
     EditorContext m_editorContext;
+    PerformanceMetricsContext m_performanceMetricsContext;
 
     void WriteRecentProjects()
     {
@@ -146,6 +149,9 @@ private:
     void DrawAssetBrowserTreeRoot(const std::string& path);
     void DrawAssetBrowserTreeNode(const std::string& path, bool recursive = false);
     void DrawAssetBrowserTreeNodesFromVector(const std::string& basePath, const std::vector<std::string>& paths);
+
+    // Performance Metrics Window
+    void PerformanceMetricsWindow();
 
     // Code Project Generation
     void GenerateCodeProject();

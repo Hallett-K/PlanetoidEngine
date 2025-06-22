@@ -54,6 +54,22 @@ namespace PlanetoidEngine
                 transform.SetRotation(glm::degrees(-body->GetAngle()));
             }
         });
+
+        for (Entity entity : m_destroyList)
+        {
+            if (m_uuidMap.find(entity.GetComponent<UUID>()) != m_uuidMap.end())
+            {
+                m_uuidMap.erase(entity.GetComponent<UUID>());
+            }
+
+            if (m_physicsBodyMap.find(entity.GetComponent<UUID>()) != m_physicsBodyMap.end())
+            {
+                m_physicsBodyMap.erase(entity.GetComponent<UUID>());
+            }
+
+            m_registry.destroy(entity);
+        }
+        m_destroyList.clear();
     }
 
     void Scene::OnUnload()
@@ -92,7 +108,8 @@ namespace PlanetoidEngine
 
     void Scene::DestroyEntity(Entity entity)
     {
-        m_registry.destroy(entity);
+        //m_registry.destroy(entity);
+        m_destroyList.push_back(entity);
     }
 
     Entity Scene::GetEntity(const std::string& name)

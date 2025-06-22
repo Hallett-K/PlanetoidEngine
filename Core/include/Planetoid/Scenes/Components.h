@@ -42,7 +42,7 @@ namespace PlanetoidEngine
             if (m_dirty)
             {
                 m_cachedMatrix = glm::translate(glm::mat4(1.0f), m_position);
-                m_cachedMatrix = glm::rotate(m_cachedMatrix, glm::radians(m_rotation), glm::vec3(0.0f, 0.0f, -1.0f));
+                m_cachedMatrix = glm::rotate(m_cachedMatrix, glm::radians(m_rotation), glm::vec3(0.0f, 0.0f, 1.0f));
                 m_cachedMatrix = glm::scale(m_cachedMatrix, glm::vec3(m_scale, 1.0f));
                 m_dirty = false;
             }
@@ -85,11 +85,12 @@ namespace PlanetoidEngine
         float top = 0.0f;
         float nearPlane = -1.0f;
         float farPlane = 1.0f;
+        glm::vec3 ClearColour = glm::vec3(0.2f, 0.3f, 0.8f);
 
         Camera() = default;
         Camera(const Camera&) = default;
-        Camera(const glm::mat4& projection)
-            : projection(projection) {}
+        Camera(const glm::mat4& projection, const glm::vec3& clearColour = glm::vec3(0.2f, 0.3f, 0.8f))
+            : projection(projection), ClearColour(clearColour) {}
 
         const glm::mat4& GetProjection() const { return projection; }
         void SetProjection(const glm::mat4& projection) { this->projection = projection; }
@@ -103,6 +104,10 @@ namespace PlanetoidEngine
             this->farPlane = farPlane;
             this->projection = glm::ortho(left, right, bottom, top, nearPlane, farPlane);
         }
+
+        const glm::vec3& GetClearColour() const { return ClearColour; }
+        void SetClearColour(const glm::vec3& clearColour) { ClearColour = clearColour; }
+        void SetClearColour(float r, float g, float b) { ClearColour = glm::vec3(r, g, b); }
     };
 
     // Physics

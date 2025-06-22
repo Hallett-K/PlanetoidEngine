@@ -62,6 +62,8 @@ void Starship::Init()
 
     window.SetWindowIcon("assets/textures/Starship.png");
 
+    m_performanceMetricsContext.Reset();
+
     sceneManager.OnSceneEnter.Bind(&Starship::OnSceneLoaded, this);
 }
 
@@ -84,8 +86,14 @@ void Starship::Update(float deltaTime)
                         scriptComponent.script->OnUpdate(deltaTime);
                 });
 
+                if (m_editorContext.playState != EditorContext::PlayState::Playing)
+                {
+                    break;
+                }
+
                 scene->OnUpdate(deltaTime);
 
+                renderer.setClearColour(m_editorContext.playInEditorCameraComponent.ClearColour);
                 renderer.BeginScene(m_editorContext.playInEditorCameraTransform.GetMatrix(), m_editorContext.playInEditorCameraComponent.GetProjection());
                 scene->GetRegistry().view<PlanetoidEngine::Transform, PlanetoidEngine::SpriteRenderer>().each([&](auto& transform, auto& spriteRenderer)
                 {
@@ -94,6 +102,8 @@ void Starship::Update(float deltaTime)
                 m_editorContext.framebuffer.Bind();
                 renderer.Flush();
                 m_editorContext.framebuffer.Unbind();    
+
+                m_performanceMetricsContext.Update(deltaTime);
 
                 break;
             }
@@ -118,11 +128,11 @@ void Starship::Update(float deltaTime)
                 {
                     if (PlanetoidEngine::InputManager::IsKeyPressed(PE_KEY_W))
                     {
-                        m_editorContext.editorCameraTransform.SetPosition(m_editorContext.editorCameraTransform.GetPosition() + glm::vec3(0.0f, -1.0f, 0.0f) * deltaTime * 600.0f);
+                        m_editorContext.editorCameraTransform.SetPosition(m_editorContext.editorCameraTransform.GetPosition() + glm::vec3(0.0f, 1.0f, 0.0f) * deltaTime * 600.0f);
                     }
                     if (PlanetoidEngine::InputManager::IsKeyPressed(PE_KEY_S))
                     {
-                        m_editorContext.editorCameraTransform.SetPosition(m_editorContext.editorCameraTransform.GetPosition() + glm::vec3(0.0f, 1.0f, 0.0f) * deltaTime * 600.0f);
+                        m_editorContext.editorCameraTransform.SetPosition(m_editorContext.editorCameraTransform.GetPosition() + glm::vec3(0.0f, -1.0f, 0.0f) * deltaTime * 600.0f);
                     }
                     if (PlanetoidEngine::InputManager::IsKeyPressed(PE_KEY_A))
                     {
@@ -149,6 +159,7 @@ void Starship::Update(float deltaTime)
                     }
                 }
 
+                renderer.setClearColour(m_editorContext.editorCameraComponent.ClearColour);
                 renderer.BeginScene(m_editorContext.editorCameraTransform.GetMatrix(), m_editorContext.editorCameraComponent.GetProjection());
                 scene->GetRegistry().view<PlanetoidEngine::Transform, PlanetoidEngine::SpriteRenderer>().each([&](auto& transform, auto& spriteRenderer)
                 {
@@ -188,6 +199,8 @@ void Starship::Update(float deltaTime)
     OpenScenePopup();
     NewFolderPopup();
     NewScriptPopup();
+
+    PerformanceMetricsWindow();
 }
 
 void Starship::Shutdown()
@@ -217,6 +230,19 @@ void Starship::Shutdown()
     if (PlanetoidEngine::FileIO::FileExists(dllCopyPhysicalPath))
     {
         PlanetoidEngine::FileIO::FileDelete(dllCopyPhysicalPath);
+    }
+}
+
+void Starship::Exit()
+{
+    if (m_editorContext.playState == EditorContext::PlayState::Playing)
+    {
+        m_editorContext.playState = EditorContext::PlayState::Stopped;
+        OnStop();
+    }
+    else
+    {
+        Application::Exit();
     }
 }
 
@@ -319,11 +345,6 @@ bool Starship::LoadProject(const std::string& path)
         std::string editorVersion = projectFileContents.substr(editorVersionPos + 14, startupScenePos - editorVersionPos - 15);
         std::string startupScene = projectFileContents.substr(startupScenePos + 13);
 
-        if (editorVersion != m_editorContext.GetVersionString())
-        {
-            return false;
-        }
-
         vfs.Mount("ProjectRoot", m_editorContext.projectContext.rootPath);
         vfs.Mount("GlobalAssets", m_editorContext.projectContext.rootPath + "/GlobalAssets");
         vfs.Mount("Scenes", m_editorContext.projectContext.rootPath + "/Scenes");
@@ -391,7 +412,6 @@ bool Starship::LoadScene(const std::string& name)
     vfs.Mount("SceneRoot", m_editorContext.projectContext.rootPath + "/Scenes/" + name);
     vfs.Mount("SceneAssets", m_editorContext.projectContext.rootPath + "/Scenes/" + name + "/SceneAssets");
 
-    // TODO: Entity loading
     PlanetoidEngine::File sceneFile = PlanetoidEngine::FileIO::Open(m_editorContext.projectContext.rootPath + "/Scenes/" + name + "/" + name + ".scene");
     std::vector<std::string> sceneFileContents = sceneFile.ReadTextContentsToStringArray();
     
@@ -494,7 +514,7 @@ bool Starship::LoadScene(const std::string& name)
         }
         else if (line.find("Camera:") != std::string::npos)
         {
-            // Camera:left,right,bottom,top,near,far
+            // Camera:left,right,bottom,top,near,far,clearColourR,clearColourG,clearColourB
             std::string cameraData = line.substr(7);
             std::string left = cameraData.substr(0, cameraData.find(","));
             cameraData = cameraData.substr(cameraData.find(",") + 1);
@@ -506,10 +526,17 @@ bool Starship::LoadScene(const std::string& name)
             cameraData = cameraData.substr(cameraData.find(",") + 1);
             std::string nearPlane = cameraData.substr(0, cameraData.find(","));
             cameraData = cameraData.substr(cameraData.find(",") + 1);
-            std::string farPlane = cameraData;
+            std::string farPlane = cameraData.substr(0, cameraData.find(","));
+            cameraData = cameraData.substr(cameraData.find(",") + 1);
+            std::string clearColourR = cameraData.substr(0, cameraData.find(","));
+            cameraData = cameraData.substr(cameraData.find(",") + 1);
+            std::string clearColourG = cameraData.substr(0, cameraData.find(","));
+            cameraData = cameraData.substr(cameraData.find(",") + 1);
+            std::string clearColourB = cameraData;
 
             PlanetoidEngine::Camera& camera = entity.AddComponent<PlanetoidEngine::Camera>();
             camera.SetProjection(std::stof(left), std::stof(right), std::stof(bottom), std::stof(top), std::stof(nearPlane), std::stof(farPlane));
+            camera.SetClearColour(std::stof(clearColourR), std::stof(clearColourG), std::stof(clearColourB));
 
             continue;
         }
@@ -841,8 +868,9 @@ void Starship::SerializeEntity(PlanetoidEngine::Entity entity, PlanetoidEngine::
         float top = camera.top;
         float nearPlane = camera.nearPlane;
         float farPlane = camera.farPlane;
+        glm::vec3 clearColour = camera.ClearColour;
 
-        sceneFile.AppendTextContents("Camera:" + std::to_string(left) + "," + std::to_string(right) + "," + std::to_string(bottom) + "," + std::to_string(top) + "," + std::to_string(nearPlane) + "," + std::to_string(farPlane) + "\n");
+        sceneFile.AppendTextContents("Camera:" + std::to_string(left) + "," + std::to_string(right) + "," + std::to_string(bottom) + "," + std::to_string(top) + "," + std::to_string(nearPlane) + "," + std::to_string(farPlane) + "," + std::to_string(clearColour.r) + "," + std::to_string(clearColour.g) + "," + std::to_string(clearColour.b) + "\n");
     }
     if (entity.HasComponent<PlanetoidEngine::ScriptComponent>())
     {
@@ -1073,6 +1101,8 @@ void Starship::OnPlay()
         fileWatcherThread.join();
     }
 
+    m_performanceMetricsContext.Reset();
+
     m_editorContext.playState = EditorContext::PlayState::Playing;
 
     m_editorContext.selectedEntity = PlanetoidEngine::Entity();
@@ -1125,7 +1155,9 @@ void Starship::OnStop()
     m_EnableFileWatcher.store(true);
     fileWatcherThread = std::thread(&Starship::FileWatcherTask, this);
 
-    sceneManager.SetCurrentScene(m_editorContext.projectContext.currentSceneName);    
+    m_editorContext.showPerformanceMetricsWindow = true;
+
+    sceneManager.SetCurrentScene(m_editorContext.projectContext.currentSceneName);
 }
 
 void Starship::AttachEntityScripts(bool callOnAttach)
@@ -1705,7 +1737,7 @@ void Starship::Viewport()
         {
             m_editorContext.viewportSize = glm::vec2(viewportSize.x, viewportSize.y);
         }
-        ImGui::Image(reinterpret_cast<void*>(m_editorContext.framebuffer.GetColorAttachment().GetHandle()), ImVec2(viewportSize.x, viewportSize.y), ImVec2(0, 1), ImVec2(1, 0));
+        ImGui::Image(reinterpret_cast<void*>(m_editorContext.framebuffer.GetColorAttachment().GetHandle()), ImVec2(viewportSize.x, viewportSize.y));
 
         if (m_editorContext.playState != EditorContext::PlayState::Stopped)
         {
@@ -1733,8 +1765,6 @@ void Starship::Viewport()
             // Convert the mouse position to a position in the world
             mousePos.x = (mousePos.x / viewportSize.x) * 1280.0f;
             mousePos.y = (mousePos.y / viewportSize.y) * 720.0f;
-
-            mousePos.y = 720.0f - mousePos.y;
 
             // Apply the camera transform to the mouse position
             glm::mat4 invCameraTransform = glm::inverse(m_editorContext.editorCameraTransform.GetMatrix());
@@ -1837,10 +1867,10 @@ void Starship::Viewport()
                 glm::vec2 rotatedP3 = glm::vec2(transformMatrix * glm::vec4(localP3, 0.0f, 1.0f)) + glm::vec2(m_editorContext.editorCameraTransform.GetPosition());
                 glm::vec2 rotatedP4 = glm::vec2(transformMatrix * glm::vec4(localP4, 0.0f, 1.0f)) + glm::vec2(m_editorContext.editorCameraTransform.GetPosition());
 
-                rotatedP1 = glm::vec2((rotatedP1.x / 1280.0f) * viewportSize.x, viewportSize.y - (rotatedP1.y / 720.0f) * viewportSize.y);
-                rotatedP2 = glm::vec2((rotatedP2.x / 1280.0f) * viewportSize.x, viewportSize.y - (rotatedP2.y / 720.0f) * viewportSize.y);
-                rotatedP3 = glm::vec2((rotatedP3.x / 1280.0f) * viewportSize.x, viewportSize.y - (rotatedP3.y / 720.0f) * viewportSize.y);
-                rotatedP4 = glm::vec2((rotatedP4.x / 1280.0f) * viewportSize.x, viewportSize.y - (rotatedP4.y / 720.0f) * viewportSize.y);
+                rotatedP1 = glm::vec2((rotatedP1.x / 1280.0f) * viewportSize.x, (rotatedP1.y / 720.0f) * viewportSize.y);
+                rotatedP2 = glm::vec2((rotatedP2.x / 1280.0f) * viewportSize.x, (rotatedP2.y / 720.0f) * viewportSize.y);
+                rotatedP3 = glm::vec2((rotatedP3.x / 1280.0f) * viewportSize.x, (rotatedP3.y / 720.0f) * viewportSize.y);
+                rotatedP4 = glm::vec2((rotatedP4.x / 1280.0f) * viewportSize.x, (rotatedP4.y / 720.0f) * viewportSize.y);
 
                 rotatedP1 += itemRectMin;
                 rotatedP2 += itemRectMin;
@@ -2421,6 +2451,7 @@ void Starship::InspectorCamera()
     glm::vec2 resolution = glm::vec2(camera.right, camera.top);
     float nearPlane = camera.nearPlane;
     float farPlane = camera.farPlane;
+    glm::vec3 clearColour = camera.GetClearColour();
 
     if (ImGui::DragFloat2("Resolution", &resolution.x, 1.0f))
     {
@@ -2435,6 +2466,11 @@ void Starship::InspectorCamera()
     if (ImGui::DragFloat("Far Plane", &farPlane, 0.1f))
     {
         camera.SetProjection(0.0f, resolution.x, 0.0f, resolution.y, nearPlane, farPlane);
+    }
+
+    if (ImGui::ColorEdit3("Clear Colour", &clearColour.x))
+    {
+        camera.SetClearColour(clearColour);
     }
 }
 
@@ -2965,6 +3001,33 @@ void Starship::DrawAssetBrowserTreeNodesFromVector(const std::string& basePath, 
         {
             ImGui::TreePop();
         }
+    }
+}
+
+void Starship::PerformanceMetricsWindow()
+{
+    if (m_editorContext.showPerformanceMetricsWindow)
+    {
+        ImGui::OpenPopup("Performance Metric Report");
+        m_editorContext.showPerformanceMetricsWindow = false;
+    }
+
+    if (ImGui::BeginPopupModal("Performance Metric Report"))
+    {
+        ImGui::Text("Frame Time Average: %f", m_performanceMetricsContext.frameTimeAverage);
+        ImGui::Text("Frame Time Max: %f", m_performanceMetricsContext.frameTimeMax);
+        ImGui::Text("Frame Time Min: %f", m_performanceMetricsContext.frameTimeMin);
+        ImGui::Text("Frame Time Count: %d", m_performanceMetricsContext.frameTimes.size());
+
+        ImGui::PlotLines("Frame Time", m_performanceMetricsContext.frameTimes.data(), m_performanceMetricsContext.frameTimes.size());
+
+        if (ImGui::Button("Okay"))
+        {
+            m_performanceMetricsContext.Reset();
+            ImGui::CloseCurrentPopup();
+        }
+        
+        ImGui::EndPopup();
     }
 }
 
